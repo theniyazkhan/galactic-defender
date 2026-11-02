@@ -43,7 +43,6 @@ jobs:
       # -----------------------------------------------------------------------
       # 4. Compile main.cpp → WebAssembly bundle
       #
-      #    -s USE_FREEGLUT=1         Emscripten's built-in FreeGLUT port
       #    -s LEGACY_GL_EMULATION=1  OpenGL 1.x fixed-function emulation
       #                              (glBegin/glEnd, glVertex2f, glColor3f …)
       #    -s ALLOW_MEMORY_GROWTH=1  Prevent OOM on larger WASM heaps
@@ -55,7 +54,6 @@ jobs:
           mkdir -p public
           emcc main.cpp \
             -o public/index.html \
-            -s USE_FREEGLUT=1 \
             -s LEGACY_GL_EMULATION=1 \
             -s ALLOW_MEMORY_GROWTH=1 \
             -O2
