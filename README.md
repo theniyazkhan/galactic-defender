@@ -21,13 +21,11 @@
 
 ## 🎮 Live View
 
-> **Insert your GitHub Pages URL below after the first successful Actions run.**
-
 ```
-https://<your-github-username>.github.io/galactic-defender/
+https://theniyazkhan.github.io/galactic-defender/
 ```
 
-[![Build & Deploy](https://github.com/<your-github-username>/galactic-defender/actions/workflows/build.yml/badge.svg)](https://github.com/<your-github-username>/galactic-defender/actions/workflows/build.yml)
+[![Build & Deploy](https://github.com/theniyazkhan>/galactic-defender/actions/workflows/build.yml/badge.svg)](https://github.com/theniyazkhan/galactic-defender/actions/workflows/build.yml)
 
 ---
 
@@ -176,7 +174,7 @@ Push any commit to the `main` branch. The workflow defined in
 
 The game becomes available at:
 ```
-https://<your-github-username>.github.io/galactic-defender/
+https://theniyazkhan.github.io/galactic-defender/
 ```
 
 ---
