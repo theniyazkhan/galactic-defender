@@ -1,32 +1,22 @@
-# =============================================================================
-#  Galactic Defender — GitHub Actions CI/CD Pipeline
-#  File: .github/workflows/build.yml
-#
-#  What this workflow does
-#  -----------------------
-#  1. Triggered on every push to the `main` branch.
-#  2. Checks out the repository source code.
-#  3. Installs the Emscripten SDK (emsdk) toolchain.
-#  4. Compiles `main.cpp` to WebAssembly + HTML shell using `emcc`.
-#  5. Deploys the generated `public/` directory to the `gh-pages` branch
-#     so the live game is accessible at:
-#     https://<your-github-username>.github.io/galactic-defender/
-#
-#  Required Repository Secret
-#  --------------------------
-#  This workflow uses GITHUB_TOKEN (automatically provided by Actions)
-#  for the gh-pages deployment step — no manual secret configuration needed.
-# =============================================================================
-
 name: Build & Deploy — Galactic Defender WebAssembly
 
+# =============================================================================
+#  Triggers: every push to main + manual re-run from the Actions tab
+# =============================================================================
 on:
   push:
     branches:
-      - main          # Trigger on every push to main
-
-  # Allow manual re-runs from the Actions tab
+      - main
   workflow_dispatch:
+
+# =============================================================================
+#  CRITICAL: Grant GITHUB_TOKEN write access so peaceiris/actions-gh-pages
+#  can push the compiled output to the gh-pages branch.
+#  Without this block, GitHub's default read-only token causes the deploy
+#  step to fail with a 403 / "refusing to allow" error.
+# =============================================================================
+permissions:
+  contents: write
 
 jobs:
   build-and-deploy:
@@ -42,29 +32,26 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Step 2 — Install Emscripten SDK
-      #   mymindstorm/setup-emsdk@v12 installs emsdk and adds `emcc` / `emcc`
-      #   to PATH so subsequent steps can call the compiler directly.
       # -----------------------------------------------------------------------
       - name: Set up Emscripten SDK
         uses: mymindstorm/setup-emsdk@v12
         with:
-          version: latest          # Always use the most recent stable release
+          version: latest
 
       # -----------------------------------------------------------------------
-      # Step 3 — Verify Emscripten installation
+      # Step 3 — Verify Emscripten is on PATH
       # -----------------------------------------------------------------------
       - name: Verify emcc version
         run: emcc --version
 
       # -----------------------------------------------------------------------
-      # Step 4 — Compile main.cpp to WebAssembly
+      # Step 4 — Compile main.cpp → WebAssembly
       #
-      #   Flags explained:
-      #     -s USE_FREEGLUT=1        : Link the Emscripten-provided FreeGLUT port
-      #     -s LEGACY_GL_EMULATION=1 : Enable OpenGL 1.x fixed-function emulation
-      #                                (required for glBegin/glEnd, glVertex, etc.)
-      #     -O2                      : Optimise for speed (reduces WASM size)
-      #     -o public/index.html     : Emscripten generates .html + .js + .wasm
+      #   -s USE_FREEGLUT=1        Link the Emscripten FreeGLUT port
+      #   -s LEGACY_GL_EMULATION=1 Enable OpenGL 1.x fixed-function pipeline
+      #                            (required for glBegin/glEnd/glVertex2f)
+      #   -O2                      Optimise (smaller WASM, faster load)
+      #   -o public/index.html     Emscripten emits .html + .js + .wasm bundle
       # -----------------------------------------------------------------------
       - name: Compile C++ to WebAssembly
         run: |
@@ -76,15 +63,15 @@ jobs:
             -O2
 
       # -----------------------------------------------------------------------
-      # Step 5 — List build output for debugging
+      # Step 5 — Confirm output files exist before deploying
       # -----------------------------------------------------------------------
       - name: Show build artifacts
         run: ls -lh public/
 
       # -----------------------------------------------------------------------
-      # Step 6 — Deploy public/ to GitHub Pages (gh-pages branch)
-      #   peaceiris/actions-gh-pages@v3 force-pushes the contents of
-      #   `publish_dir` to the `gh-pages` branch, which GitHub Pages serves.
+      # Step 6 — Deploy public/ to gh-pages branch
+      #   peaceiris/actions-gh-pages force-pushes public/ to gh-pages.
+      #   GitHub Pages must be set to serve from that branch (see README).
       # -----------------------------------------------------------------------
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
