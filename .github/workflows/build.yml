@@ -1,57 +1,54 @@
 name: Build & Deploy — Galactic Defender WebAssembly
 
-# =============================================================================
-#  Triggers: every push to main + manual re-run from the Actions tab
-# =============================================================================
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
-# =============================================================================
-#  CRITICAL: Grant GITHUB_TOKEN write access so peaceiris/actions-gh-pages
-#  can push the compiled output to the gh-pages branch.
-#  Without this block, GitHub's default read-only token causes the deploy
-#  step to fail with a 403 / "refusing to allow" error.
-# =============================================================================
+# Required so GITHUB_TOKEN can push to gh-pages branch
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
-    name: Compile C++ → WebAssembly and Deploy to GitHub Pages
+    name: Compile C++ to WebAssembly and Deploy
     runs-on: ubuntu-latest
 
     steps:
       # -----------------------------------------------------------------------
-      # Step 1 — Checkout source code
+      # 1. Checkout
       # -----------------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
 
       # -----------------------------------------------------------------------
-      # Step 2 — Install Emscripten SDK
+      # 2. Install Emscripten SDK
+      #    Pin to a specific stable version instead of "latest" to prevent
+      #    random breakage when the latest tag changes.
       # -----------------------------------------------------------------------
       - name: Set up Emscripten SDK
         uses: mymindstorm/setup-emsdk@v12
         with:
-          version: latest
+          version: 3.1.51
 
       # -----------------------------------------------------------------------
-      # Step 3 — Verify Emscripten is on PATH
+      # 3. Sanity-check the compiler is on PATH
       # -----------------------------------------------------------------------
-      - name: Verify emcc version
+      - name: Verify emcc
         run: emcc --version
 
       # -----------------------------------------------------------------------
-      # Step 4 — Compile main.cpp → WebAssembly
+      # 4. Compile main.cpp → WebAssembly bundle
       #
-      #   -s USE_FREEGLUT=1        Link the Emscripten FreeGLUT port
-      #   -s LEGACY_GL_EMULATION=1 Enable OpenGL 1.x fixed-function pipeline
-      #                            (required for glBegin/glEnd/glVertex2f)
-      #   -O2                      Optimise (smaller WASM, faster load)
-      #   -o public/index.html     Emscripten emits .html + .js + .wasm bundle
+      #    -s USE_FREEGLUT=1         Emscripten's built-in FreeGLUT port
+      #    -s LEGACY_GL_EMULATION=1  OpenGL 1.x fixed-function emulation
+      #                              (glBegin/glEnd, glVertex2f, glColor3f …)
+      #    -s ALLOW_MEMORY_GROWTH=1  Prevent OOM on larger WASM heaps
+      #    -O2                       Optimise binary size and speed
+      #    -o public/index.html      Emscripten generates .html + .js + .wasm
       # -----------------------------------------------------------------------
       - name: Compile C++ to WebAssembly
         run: |
@@ -60,18 +57,19 @@ jobs:
             -o public/index.html \
             -s USE_FREEGLUT=1 \
             -s LEGACY_GL_EMULATION=1 \
+            -s ALLOW_MEMORY_GROWTH=1 \
             -O2
 
       # -----------------------------------------------------------------------
-      # Step 5 — Confirm output files exist before deploying
+      # 5. Confirm build output
       # -----------------------------------------------------------------------
-      - name: Show build artifacts
+      - name: List build output
         run: ls -lh public/
 
       # -----------------------------------------------------------------------
-      # Step 6 — Deploy public/ to gh-pages branch
-      #   peaceiris/actions-gh-pages force-pushes public/ to gh-pages.
-      #   GitHub Pages must be set to serve from that branch (see README).
+      # 6. Deploy public/ → gh-pages branch
+      #    peaceiris/actions-gh-pages force-pushes public/ to gh-pages.
+      #    Set GitHub Pages source to "gh-pages / root" in repo Settings.
       # -----------------------------------------------------------------------
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -79,4 +77,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           publish_branch: gh-pages
-          commit_message: "deploy: WebAssembly build from ${{ github.sha }}"
+          force_orphan: true
+          commit_message: "deploy: ${{ github.sha }}"
