@@ -22,7 +22,6 @@
 //  Build (WebAssembly via Emscripten)
 //  ------------------------------------
 //    emcc main.cpp -o public/index.html \
-//         -s USE_FREEGLUT=1             \
 //         -s LEGACY_GL_EMULATION=1
 // =============================================================================
 

@@ -154,7 +154,6 @@ g++ main.cpp -o galactic_defender.exe -lfreeglut -lopengl32 -lglu32
 mkdir -p public
 emcc main.cpp \
      -o public/index.html \
-     -s USE_FREEGLUT=1 \
      -s LEGACY_GL_EMULATION=1 \
      -O2
 
