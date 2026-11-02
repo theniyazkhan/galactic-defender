@@ -1,20 +1,95 @@
-name: Compile C++ to Web
+# =============================================================================
+#  Galactic Defender — GitHub Actions CI/CD Pipeline
+#  File: .github/workflows/build.yml
+#
+#  What this workflow does
+#  -----------------------
+#  1. Triggered on every push to the `main` branch.
+#  2. Checks out the repository source code.
+#  3. Installs the Emscripten SDK (emsdk) toolchain.
+#  4. Compiles `main.cpp` to WebAssembly + HTML shell using `emcc`.
+#  5. Deploys the generated `public/` directory to the `gh-pages` branch
+#     so the live game is accessible at:
+#     https://<your-github-username>.github.io/galactic-defender/
+#
+#  Required Repository Secret
+#  --------------------------
+#  This workflow uses GITHUB_TOKEN (automatically provided by Actions)
+#  for the gh-pages deployment step — no manual secret configuration needed.
+# =============================================================================
+
+name: Build & Deploy — Galactic Defender WebAssembly
+
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main          # Trigger on every push to main
+
+  # Allow manual re-runs from the Actions tab
+  workflow_dispatch:
+
 jobs:
-  build:
+  build-and-deploy:
+    name: Compile C++ → WebAssembly and Deploy to GitHub Pages
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Emscripten Compiler
+      # -----------------------------------------------------------------------
+      # Step 1 — Checkout source code
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # -----------------------------------------------------------------------
+      # Step 2 — Install Emscripten SDK
+      #   mymindstorm/setup-emsdk@v12 installs emsdk and adds `emcc` / `emcc`
+      #   to PATH so subsequent steps can call the compiler directly.
+      # -----------------------------------------------------------------------
+      - name: Set up Emscripten SDK
         uses: mymindstorm/setup-emsdk@v12
-      - name: Compile Game
+        with:
+          version: latest          # Always use the most recent stable release
+
+      # -----------------------------------------------------------------------
+      # Step 3 — Verify Emscripten installation
+      # -----------------------------------------------------------------------
+      - name: Verify emcc version
+        run: emcc --version
+
+      # -----------------------------------------------------------------------
+      # Step 4 — Compile main.cpp to WebAssembly
+      #
+      #   Flags explained:
+      #     -s USE_FREEGLUT=1        : Link the Emscripten-provided FreeGLUT port
+      #     -s LEGACY_GL_EMULATION=1 : Enable OpenGL 1.x fixed-function emulation
+      #                                (required for glBegin/glEnd, glVertex, etc.)
+      #     -O2                      : Optimise for speed (reduces WASM size)
+      #     -o public/index.html     : Emscripten generates .html + .js + .wasm
+      # -----------------------------------------------------------------------
+      - name: Compile C++ to WebAssembly
         run: |
-          mkdir public
-          emcc main.cpp -o public/index.html -s USE_FREEGLUT=1 -s LEGACY_GL_EMULATION=1
-      - name: Deploy Live View
+          mkdir -p public
+          emcc main.cpp \
+            -o public/index.html \
+            -s USE_FREEGLUT=1 \
+            -s LEGACY_GL_EMULATION=1 \
+            -O2
+
+      # -----------------------------------------------------------------------
+      # Step 5 — List build output for debugging
+      # -----------------------------------------------------------------------
+      - name: Show build artifacts
+        run: ls -lh public/
+
+      # -----------------------------------------------------------------------
+      # Step 6 — Deploy public/ to GitHub Pages (gh-pages branch)
+      #   peaceiris/actions-gh-pages@v3 force-pushes the contents of
+      #   `publish_dir` to the `gh-pages` branch, which GitHub Pages serves.
+      # -----------------------------------------------------------------------
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
+          publish_branch: gh-pages
+          commit_message: "deploy: WebAssembly build from ${{ github.sha }}"
