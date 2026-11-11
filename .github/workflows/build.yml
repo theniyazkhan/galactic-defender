@@ -1,4 +1,4 @@
-name: Build & Deploy — Galactic Defender WebAssembly
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -12,33 +12,13 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-deploy:
-    name: Compile C++ to WebAssembly and Deploy
+  deploy:
+    name: Deploy Web Game to GitHub Pages
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Emscripten SDK
-        uses: emscripten-core/setup-emsdk@v16
-        with:
-          version: 3.1.51
-
-      - name: Verify emcc
-        run: emcc --version
-
-      - name: Compile C++ to WebAssembly
-        run: |
-          mkdir -p public
-          emcc main.cpp \
-            -o public/index.html \
-            -s LEGACY_GL_EMULATION=1 \
-            -s ALLOW_MEMORY_GROWTH=1 \
-            -O2
-
-      - name: List build output
-        run: ls -lh public/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

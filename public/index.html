@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Galactic Defender - Space Survival</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #060714;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      border: 3px solid #1a2a4a;
+      border-radius: 8px;
+      box-shadow: 0 0 35px rgba(0, 200, 255, 0.25);
+      background: #05060f;
+    }
+    canvas {
+      display: block;
+      background: #03030c;
+      border-radius: 6px;
+    }
+    .hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 40px;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+    .score-txt { color: #4ef0ff; font-size: 16px; }
+    .hull-wrap { display: flex; align-items: center; gap: 8px; }
+    .hull-bar-bg {
+      width: 100px;
+      height: 14px;
+      background: #252525;
+      border: 1px solid #777;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .hull-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: #00ff66;
+      transition: width 0.1s;
+    }
+    .hull-val { font-size: 14px; color: #00ff66; min-width: 45px; }
+    #instructions {
+      margin-top: 15px;
+      text-align: center;
+      color: #7b8fa8;
+      font-size: 14px;
+    }
+    #instructions kbd {
+      background: #141b2d;
+      border: 1px solid #2b395b;
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: #4ef0ff;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <div class="hud">
+      <div class="score-txt" id="hud-score">SCORE 0</div>
+      <div class="hull-wrap">
+        <span>HULL</span>
+        <div class="hull-bar-bg">
+          <div class="hull-bar-fill" id="hud-fill"></div>
+        </div>
+        <div class="hull-val" id="hud-hp">100%</div>
+      </div>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+  </div>
+
+  <div id="instructions">
+    Controls: <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to Move &bull; <kbd>SPACE</kbd> or <kbd>↑</kbd> to Fire Laser &bull; <kbd>R</kbd> to Restart
+  </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+// Sound effects using Web Audio API (no external sound files needed!)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playLaser() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.12);
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.12);
+}
+
+function playExplosion() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.25);
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.25);
+}
+
+// Game State
+let score = 0;
+let health = 100;
+let gameOver = false;
+let gameTime = 0;
+let shootTimer = 0;
+let spawnTimer = 0;
+const SHOOT_COOLDOWN = 0.22;
+const MAX_HEALTH = 100;
+
+// Player Ship
+const ship = {
+  x: W / 2,
+  y: 60,
+  halfW: 22,
+  halfH: 26,
+  speed: 6.5,
+  moveLeft: false,
+  moveRight: false,
+  holdFire: false
+};
+
+// Stars
+const stars = [];
+for (let i = 0; i < 150; i++) {
+  stars.push({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    b: 0.2 + Math.random() * 0.8,
+    speed: 0.4 + Math.random() * 1.2
+  });
+}
+
+// Entities pools
+const bullets = [];
+const asteroids = [];
+const particles = [];
+
+function spawnBullet(x, y) {
+  bullets.push({ x: x, y: y, vy: 14 });
+  playLaser();
+}
+
+function spawnAsteroid(speedMult) {
+  const h = 14 + Math.random() * 20;
+  asteroids.push({
+    x: h + Math.random() * (W - 2 * h),
+    y: H + h,
+    half: h,
+    vy: (1.6 + Math.random() * 2.2) * speedMult,
+    seed: Math.random()
+  });
+}
+
+function spawnExplosion(x, y, count = 18, color = '#ff7722') {
+  playExplosion();
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = 1.0 + Math.random() * 4.5;
+    particles.push({
+      x: x,
+      y: y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: 1.0,
+      color: color
+    });
+  }
+}
+
+// Controls
+window.addEventListener('keydown', e => {
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    e.preventDefault();
+  }
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') ship.moveLeft = true;
+  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') ship.moveRight = true;
+  if (e.code === 'Space' || e.key === 'ArrowUp') {
+    if (!gameOver && shootTimer >= SHOOT_COOLDOWN) {
+      spawnBullet(ship.x, ship.y + ship.halfH);
+      shootTimer = 0;
+    }
+    ship.holdFire = true;
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    if (gameOver) resetGame();
+  }
+});
+
+window.addEventListener('keyup', e => {
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') ship.moveLeft = false;
+  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') ship.moveRight = false;
+  if (e.code === 'Space' || e.key === 'ArrowUp') ship.holdFire = false;
+});
+
+function resetGame() {
+  score = 0;
+  health = MAX_HEALTH;
+  gameOver = false;
+  gameTime = 0;
+  shootTimer = 0;
+  spawnTimer = 0;
+  bullets.length = 0;
+  asteroids.length = 0;
+  particles.length = 0;
+  ship.x = W / 2;
+}
+
+function diffMult() {
+  const d = 1.0 + (gameTime / 120.0) * 1.5;
+  return d > 2.5 ? 2.5 : d;
+}
+
+function spawnInterval() {
+  const iv = 1.2 / diffMult();
+  return iv < 0.4 ? 0.4 : iv;
+}
+
+// Main Loop
+let lastTime = performance.now();
+function loop(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+
+  update(dt);
+  render();
+
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  // Update starfield
+  for (const s of stars) {
+    s.y -= s.speed;
+    if (s.y < 0) {
+      s.y = H;
+      s.x = Math.random() * W;
+    }
+  }
+
+  if (gameOver) {
+    updateParticles();
+    return;
+  }
+
+  gameTime += dt;
+  shootTimer += dt;
+  spawnTimer += dt;
+
+  // Move Ship
+  if (ship.moveLeft && ship.x - ship.halfW > 10) ship.x -= ship.speed;
+  if (ship.moveRight && ship.x + ship.halfW < W - 10) ship.x += ship.speed;
+
+  // Auto fire
+  if (ship.holdFire && shootTimer >= SHOOT_COOLDOWN) {
+    spawnBullet(ship.x, ship.y + ship.halfH);
+    shootTimer = 0;
+  }
+
+  // Bullets
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    bullets[i].y += bullets[i].vy;
+    if (bullets[i].y > H + 20) bullets.splice(i, 1);
+  }
+
+  // Asteroid spawn
+  if (spawnTimer >= spawnInterval()) {
+    spawnAsteroid(diffMult());
+    spawnTimer = 0;
+  }
+
+  // Asteroids kinematics & collisions
+  for (let i = asteroids.length - 1; i >= 0; i--) {
+    const a = asteroids[i];
+    a.y -= a.vy;
+
+    // Missed asteroid penalty
+    if (a.y + a.half < 0) {
+      asteroids.splice(i, 1);
+      health -= 10;
+      if (health <= 0) triggerGameOver();
+      continue;
+    }
+
+    // Bullet vs Asteroid collision
+    let destroyed = false;
+    for (let j = bullets.length - 1; j >= 0; j--) {
+      const b = bullets[j];
+      if (Math.abs(b.x - a.x) < a.half + 3 && Math.abs(b.y - a.y) < a.half + 8) {
+        bullets.splice(j, 1);
+        destroyed = true;
+        score += Math.floor(10 * diffMult());
+        spawnExplosion(a.x, a.y, 18, '#ff6a00');
+        break;
+      }
+    }
+    if (destroyed) {
+      asteroids.splice(i, 1);
+      continue;
+    }
+
+    // Ship vs Asteroid collision
+    if (Math.abs(ship.x - a.x) < (ship.halfW + a.half) * 0.78 &&
+        Math.abs(ship.y - a.y) < (ship.halfH + a.half) * 0.78) {
+      asteroids.splice(i, 1);
+      health -= 20;
+      spawnExplosion(ship.x, ship.y, 14, '#ff3300');
+      if (health <= 0) triggerGameOver();
+    }
+  }
+
+  updateParticles();
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.035;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function triggerGameOver() {
+  health = 0;
+  gameOver = true;
+  spawnExplosion(ship.x, ship.y, 50, '#ff2200');
+}
+
+// Rendering
+function render() {
+  // Clear
+  ctx.fillStyle = '#03040c';
+  ctx.fillRect(0, 0, W, H);
+
+  // Invert Y coordinate so 0,0 is at bottom like OpenGL
+  ctx.save();
+  ctx.translate(0, H);
+  ctx.scale(1, -1);
+
+  // Render Stars
+  for (const s of stars) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${s.b})`;
+    ctx.fillRect(s.x, s.y, 2, 2);
+  }
+
+  // Render Bullets
+  ctx.strokeStyle = '#ffff00';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#ffe600';
+  ctx.shadowBlur = 8;
+  for (const b of bullets) {
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x, b.y + 16);
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+
+  // Render Asteroids (Minecraft style 3D blocky voxels)
+  for (const a of asteroids) {
+    renderMinecraftAsteroid(a);
+  }
+
+  // Render Player Ship
+  if (!gameOver) {
+    renderPlayerShip();
+  }
+
+  // Render Particles
+  for (const p of particles) {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1.0;
+
+  ctx.restore();
+
+  // Update HUD
+  document.getElementById('hud-score').textContent = `SCORE  ${score}`;
+  const hpFill = document.getElementById('hud-fill');
+  const hpTxt = document.getElementById('hud-hp');
+  hpFill.style.width = `${Math.max(0, health)}%`;
+  hpTxt.textContent = `${Math.max(0, health)}%`;
+
+  if (health > 50) {
+    hpFill.style.background = '#00ff66';
+    hpTxt.style.color = '#00ff66';
+  } else if (health > 25) {
+    hpFill.style.background = '#ffcc00';
+    hpTxt.style.color = '#ffcc00';
+  } else {
+    hpFill.style.background = '#ff3333';
+    hpTxt.style.color = '#ff3333';
+  }
+
+  // Render Game Over Overlay
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0, 0, 15, 0.82)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff2222';
+    ctx.font = 'bold 36px "Segoe UI", Arial';
+    ctx.fillText('GAME OVER', W / 2, H / 2 - 30);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '20px "Segoe UI", Arial';
+    ctx.fillText(`Final Score: ${score}`, W / 2, H / 2 + 10);
+
+    ctx.fillStyle = '#88a0c0';
+    ctx.font = '15px "Segoe UI", Arial';
+    ctx.fillText('Press R to restart', W / 2, H / 2 + 50);
+  }
+}
+
+function renderPlayerShip() {
+  const cx = ship.x;
+  const cy = ship.y;
+  const hw = ship.halfW;
+  const hh = ship.halfH;
+
+  // Animated thruster flame
+  const flameLen = 14 * (1.0 + 0.35 * Math.sin(gameTime * 45));
+  ctx.fillStyle = '#ff5500';
+  ctx.beginPath();
+  ctx.moveTo(cx - hw * 0.4, cy - hh);
+  ctx.lineTo(cx - hw * 0.15, cy - hh);
+  ctx.lineTo(cx - hw * 0.28, cy - hh - flameLen);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx + hw * 0.15, cy - hh);
+  ctx.lineTo(cx + hw * 0.4, cy - hh);
+  ctx.lineTo(cx + hw * 0.28, cy - hh - flameLen);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffea00';
+  ctx.beginPath();
+  ctx.moveTo(cx - hw * 0.35, cy - hh);
+  ctx.lineTo(cx - hw * 0.2, cy - hh);
+  ctx.lineTo(cx - hw * 0.28, cy - hh - flameLen * 0.6);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx + hw * 0.2, cy - hh);
+  ctx.lineTo(cx + hw * 0.35, cy - hh);
+  ctx.lineTo(cx + hw * 0.28, cy - hh - flameLen * 0.6);
+  ctx.fill();
+
+  // Swept Wings
+  ctx.fillStyle = '#00a8d8';
+  ctx.beginPath();
+  ctx.moveTo(cx - hw * 0.4, cy);
+  ctx.lineTo(cx - hw * 1.35, cy - hh * 0.9);
+  ctx.lineTo(cx - hw * 0.3, cy - hh * 0.8);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx + hw * 0.4, cy);
+  ctx.lineTo(cx + hw * 1.35, cy - hh * 0.9);
+  ctx.lineTo(cx + hw * 0.3, cy - hh * 0.8);
+  ctx.fill();
+
+  // Wing tip beacons
+  ctx.fillStyle = '#ff2233';
+  ctx.fillRect(cx - hw * 1.35, cy - hh * 0.95, 4, 4);
+  ctx.fillStyle = '#00ff66';
+  ctx.fillRect(cx + hw * 1.25, cy - hh * 0.95, 4, 4);
+
+  // Twin Laser Cannons
+  ctx.fillStyle = '#a0b0d0';
+  ctx.fillRect(cx - hw * 0.85, cy - hh * 0.5, 3, hh * 0.75);
+  ctx.fillRect(cx + hw * 0.75, cy - hh * 0.5, 3, hh * 0.75);
+
+  // Main Fuselage (Cyan Armor)
+  ctx.fillStyle = '#00e5ff';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + hh);
+  ctx.lineTo(cx - hw * 0.7, cy - hh);
+  ctx.lineTo(cx + hw * 0.7, cy - hh);
+  ctx.closePath();
+  ctx.fill();
+
+  // Center Ridge
+  ctx.fillStyle = '#55f5ff';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + hh);
+  ctx.lineTo(cx - hw * 0.25, cy - hh * 0.6);
+  ctx.lineTo(cx + hw * 0.25, cy - hh * 0.6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cockpit Glass
+  ctx.fillStyle = '#0a224a';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + hh * 0.45);
+  ctx.lineTo(cx - hw * 0.25, cy + hh * 0.05);
+  ctx.lineTo(cx - hw * 0.2, cy - hh * 0.25);
+  ctx.lineTo(cx + hw * 0.2, cy - hh * 0.25);
+  ctx.lineTo(cx + hw * 0.25, cy + hh * 0.05);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cockpit glare
+  ctx.strokeStyle = '#c5f2ff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - hw * 0.12, cy + hh * 0.35);
+  ctx.lineTo(cx - hw * 0.18, cy + hh * 0.05);
+  ctx.stroke();
+
+  // Outline
+  ctx.strokeStyle = '#80faff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + hh);
+  ctx.lineTo(cx - hw * 0.7, cy - hh);
+  ctx.lineTo(cx + hw * 0.7, cy - hh);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+function renderMinecraftAsteroid(a) {
+  const ax = a.x;
+  const ay = a.y;
+  const h = a.half;
+  const s = a.seed;
+
+  const rBase = Math.floor(95 + 40 * s);
+  const gBase = Math.floor(48 + 20 * s);
+  const bBase = Math.floor(42 + 20 * s);
+
+  // Facet 1: Top-Left (Sunlit)
+  ctx.fillStyle = `rgb(${Math.min(255, rBase * 1.45)}, ${Math.min(255, gBase * 1.45)}, ${Math.min(255, bBase * 1.45)})`;
+  ctx.beginPath();
+  ctx.moveTo(ax - h * 0.7, ay + h);
+  ctx.lineTo(ax + h * 0.6, ay + h);
+  ctx.lineTo(ax, ay);
+  ctx.lineTo(ax - h, ay + h * 0.4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Facet 2: Top-Right
+  ctx.fillStyle = `rgb(${Math.min(255, rBase * 1.15)}, ${Math.min(255, gBase * 1.15)}, ${Math.min(255, bBase * 1.15)})`;
+  ctx.beginPath();
+  ctx.moveTo(ax + h * 0.6, ay + h);
+  ctx.lineTo(ax + h, ay + h * 0.5);
+  ctx.lineTo(ax + h * 0.8, ay - h * 0.2);
+  ctx.lineTo(ax, ay);
+  ctx.closePath();
+  ctx.fill();
+
+  // Facet 3: Bottom-Left
+  ctx.fillStyle = `rgb(${Math.floor(rBase * 0.85)}, ${Math.floor(gBase * 0.85)}, ${Math.floor(bBase * 0.85)})`;
+  ctx.beginPath();
+  ctx.moveTo(ax - h, ay + h * 0.4);
+  ctx.lineTo(ax, ay);
+  ctx.lineTo(ax - h * 0.3, ay - h);
+  ctx.lineTo(ax - h * 0.85, ay - h * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Facet 4: Bottom-Right (Deep Shadow)
+  ctx.fillStyle = `rgb(${Math.floor(rBase * 0.55)}, ${Math.floor(gBase * 0.55)}, ${Math.floor(bBase * 0.55)})`;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(ax + h * 0.8, ay - h * 0.2);
+  ctx.lineTo(ax + h * 0.5, ay - h);
+  ctx.lineTo(ax - h * 0.3, ay - h);
+  ctx.closePath();
+  ctx.fill();
+
+  // Blocky Crater
+  const c1x = ax - h * 0.35;
+  const c1y = ay + h * 0.25;
+  const c1r = h * 0.25;
+  ctx.fillStyle = '#22110f';
+  ctx.fillRect(c1x - c1r, c1y - c1r, c1r * 2, c1r * 2);
+  ctx.strokeStyle = `rgb(${Math.min(255, rBase * 1.5)}, ${Math.min(255, gBase * 1.5)}, ${Math.min(255, bBase * 1.5)})`;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(c1x - c1r, c1y - c1r, c1r * 2, c1r * 2);
+
+  // Redstone / Magma ore blocks (glowing Minecraft redstone)
+  const ore = h * 0.16;
+  ctx.fillStyle = '#ff2800';
+  ctx.fillRect(ax + h * 0.2 - ore, ay + h * 0.45 - ore, ore * 2, ore * 2);
+  ctx.fillRect(ax - h * 0.4 - ore * 0.8, ay - h * 0.25 - ore * 0.8, ore * 1.6, ore * 1.6);
+
+  // Chunky pixelated border outline
+  ctx.strokeStyle = '#180d0b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(ax - h * 0.7, ay + h);
+  ctx.lineTo(ax + h * 0.6, ay + h);
+  ctx.lineTo(ax + h, ay + h * 0.5);
+  ctx.lineTo(ax + h * 0.8, ay - h * 0.2);
+  ctx.lineTo(ax + h * 0.5, ay - h);
+  ctx.lineTo(ax - h * 0.3, ay - h);
+  ctx.lineTo(ax - h * 0.85, ay - h * 0.5);
+  ctx.lineTo(ax - h, ay + h * 0.4);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
