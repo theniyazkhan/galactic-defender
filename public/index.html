@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Galactic Defender - Space Survival</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body {
-      background: #060714;
+      background: #04050d;
       color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
@@ -15,42 +16,64 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      touch-action: none;
     }
     #game-container {
       position: relative;
-      border: 3px solid #1a2a4a;
+      border: 2px solid #1a2a4a;
       border-radius: 8px;
       box-shadow: 0 0 35px rgba(0, 200, 255, 0.25);
-      background: #05060f;
+      background: #03040c;
+      max-width: 100vw;
+      max-height: 78vh;
     }
     canvas {
       display: block;
-      background: #03030c;
+      background: #02030a;
       border-radius: 6px;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
     }
     .hud {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
-      height: 40px;
-      background: rgba(0, 0, 0, 0.65);
+      height: 42px;
+      background: rgba(4, 7, 20, 0.85);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 0 12px;
       font-weight: bold;
-      letter-spacing: 1.5px;
+      letter-spacing: 1px;
       border-top-left-radius: 6px;
       border-top-right-radius: 6px;
+      border-bottom: 1px solid rgba(0, 200, 255, 0.2);
+      font-size: 14px;
+      z-index: 10;
     }
-    .score-txt { color: #4ef0ff; font-size: 16px; }
-    .hull-wrap { display: flex; align-items: center; gap: 8px; }
+    .hud-left { display: flex; align-items: center; gap: 14px; }
+    .score-txt { color: #4ef0ff; }
+    .lives-txt { color: #ff3366; display: flex; align-items: center; gap: 4px; }
+    .power-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #ffaa00;
+      color: #000;
+      font-weight: 800;
+      display: none;
+      animation: pulse 0.8s infinite alternate;
+    }
+    @keyframes pulse { from { opacity: 0.7; } to { opacity: 1.0; } }
+    .hull-wrap { display: flex; align-items: center; gap: 6px; }
     .hull-bar-bg {
-      width: 100px;
-      height: 14px;
-      background: #252525;
-      border: 1px solid #777;
+      width: 80px;
+      height: 12px;
+      background: #1a1a24;
+      border: 1px solid #555;
       border-radius: 3px;
       overflow: hidden;
     }
@@ -60,20 +83,77 @@
       background: #00ff66;
       transition: width 0.1s;
     }
-    .hull-val { font-size: 14px; color: #00ff66; min-width: 45px; }
+    .hull-val { font-size: 13px; color: #00ff66; min-width: 38px; }
+
+    /* On-Screen Touch Controls for Mobile */
+    #mobile-controls {
+      display: flex;
+      width: 100%;
+      max-width: 800px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 18px;
+      margin-top: 6px;
+      z-index: 20;
+    }
+    .dpad {
+      display: flex;
+      gap: 14px;
+    }
+    .action-group {
+      display: flex;
+      gap: 12px;
+    }
+    .touch-btn {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      background: rgba(15, 30, 60, 0.75);
+      border: 2px solid #00c8ff;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(0, 200, 255, 0.35);
+      cursor: pointer;
+      touch-action: none;
+      transition: background 0.1s, transform 0.05s;
+    }
+    .touch-btn:active, .touch-btn.pressed {
+      background: rgba(0, 200, 255, 0.5);
+      transform: scale(0.92);
+    }
+    .btn-fire {
+      width: 75px;
+      height: 75px;
+      background: rgba(180, 30, 30, 0.8);
+      border-color: #ff3344;
+      box-shadow: 0 0 18px rgba(255, 50, 70, 0.45);
+      font-size: 15px;
+      letter-spacing: 1px;
+    }
+    .btn-fire:active, .btn-fire.pressed {
+      background: rgba(255, 50, 70, 0.7);
+    }
     #instructions {
-      margin-top: 15px;
       text-align: center;
-      color: #7b8fa8;
-      font-size: 14px;
+      color: #6a7d9b;
+      font-size: 13px;
+      margin-top: 4px;
     }
     #instructions kbd {
       background: #141b2d;
       border: 1px solid #2b395b;
-      padding: 2px 7px;
+      padding: 1px 6px;
       border-radius: 4px;
       color: #4ef0ff;
-      font-weight: 600;
+    }
+    @media (min-width: 900px) {
+      /* Show touch buttons slightly more compact on desktop or keep available for hybrid screens */
+      .touch-btn { width: 56px; height: 56px; font-size: 20px; }
+      .btn-fire { width: 66px; height: 66px; font-size: 14px; }
     }
   </style>
 </head>
@@ -81,7 +161,11 @@
 
   <div id="game-container">
     <div class="hud">
-      <div class="score-txt" id="hud-score">SCORE 0</div>
+      <div class="hud-left">
+        <div class="score-txt" id="hud-score">SCORE 0</div>
+        <div class="lives-txt" id="hud-lives">🚀 &times; 3</div>
+        <div class="power-badge" id="hud-power">BURST FIRE</div>
+      </div>
       <div class="hull-wrap">
         <span>HULL</span>
         <div class="hull-bar-bg">
@@ -93,8 +177,19 @@
     <canvas id="gameCanvas" width="800" height="600"></canvas>
   </div>
 
+  <!-- Mobile On-Screen Virtual Controls -->
+  <div id="mobile-controls">
+    <div class="dpad">
+      <div class="touch-btn" id="btn-left">◀</div>
+      <div class="touch-btn" id="btn-right">▶</div>
+    </div>
+    <div class="action-group">
+      <div class="touch-btn btn-fire" id="btn-fire">FIRE</div>
+    </div>
+  </div>
+
   <div id="instructions">
-    Controls: <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to Move &bull; <kbd>SPACE</kbd> or <kbd>↑</kbd> to Fire Laser &bull; <kbd>R</kbd> to Restart
+    Desktop: <kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd> &bull; Fire: <kbd>SPACE</kbd> / <kbd>↑</kbd> &bull; Restart: <kbd>R</kbd> | Mobile: Use buttons or Drag on screen
   </div>
 
 <script>
@@ -103,30 +198,45 @@ const ctx = canvas.getContext('2d');
 const W = canvas.width;
 const H = canvas.height;
 
-// Sound effects using Web Audio API (no external sound files needed!)
+// Web Audio API Sound Effects
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playLaser() {
+function playLaser(pitch = 880) {
   if (audioCtx.state === 'suspended') audioCtx.resume();
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.12);
-  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+  osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.11);
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.11);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start();
-  osc.stop(audioCtx.currentTime + 0.12);
+  osc.stop(audioCtx.currentTime + 0.11);
 }
 
-function playExplosion() {
+function playExplosion(large = false) {
   if (audioCtx.state === 'suspended') audioCtx.resume();
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'square';
-  osc.frequency.setValueAtTime(140, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.25);
+  osc.frequency.setValueAtTime(large ? 180 : 130, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + (large ? 0.4 : 0.22));
+  gain.gain.setValueAtTime(large ? 0.28 : 0.16, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (large ? 0.4 : 0.22));
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + (large ? 0.4 : 0.22));
+}
+
+function playPowerup() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.25);
   gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
   osc.connect(gain);
@@ -138,11 +248,19 @@ function playExplosion() {
 // Game State
 let score = 0;
 let health = 100;
+let lives = 3;
 let gameOver = false;
 let gameTime = 0;
 let shootTimer = 0;
 let spawnTimer = 0;
-const SHOOT_COOLDOWN = 0.22;
+let invulnerableTimer = 0; // respawn shield
+
+// Powerup States:
+// - burstTimer: triple-spread blaster / rapid burst
+// - wingmanTimer: 2 satellite support companion drones
+let burstTimer = 0;
+let wingmanTimer = 0;
+
 const MAX_HEALTH = 100;
 
 // Player Ship
@@ -151,31 +269,54 @@ const ship = {
   y: 60,
   halfW: 22,
   halfH: 26,
-  speed: 6.5,
+  speed: 6.8,
   moveLeft: false,
   moveRight: false,
   holdFire: false
 };
 
-// Stars
+// Entities pools
 const stars = [];
 for (let i = 0; i < 150; i++) {
   stars.push({
     x: Math.random() * W,
     y: Math.random() * H,
     b: 0.2 + Math.random() * 0.8,
-    speed: 0.4 + Math.random() * 1.2
+    speed: 0.4 + Math.random() * 1.3
   });
 }
 
-// Entities pools
 const bullets = [];
 const asteroids = [];
 const particles = [];
+const drops = []; // power-up drop items (Repair, Burst Blaster, Wingmen)
 
-function spawnBullet(x, y) {
-  bullets.push({ x: x, y: y, vy: 14 });
-  playLaser();
+function spawnBullet(x, y, vx = 0, vy = 15, color = '#ffff00') {
+  bullets.push({ x, y, vx, vy, color });
+}
+
+function fireWeapons() {
+  const cx = ship.x;
+  const cy = ship.y + ship.halfH;
+
+  if (burstTimer > 0) {
+    // 💥 BURST / TRIPLE SPREAD SHOT
+    spawnBullet(cx, cy, 0, 16, '#ff44aa');
+    spawnBullet(cx - 10, cy - 6, -3.2, 15, '#ff44aa');
+    spawnBullet(cx + 10, cy - 6, 3.2, 15, '#ff44aa');
+    playLaser(1100);
+  } else {
+    // Standard twin blasters
+    spawnBullet(cx - 12, cy, 0, 14, '#ffff00');
+    spawnBullet(cx + 12, cy, 0, 14, '#ffff00');
+    playLaser(880);
+  }
+
+  // If wingman drones active, they fire complementary beams
+  if (wingmanTimer > 0) {
+    spawnBullet(cx - 44, cy - 10, 0, 14, '#00e5ff');
+    spawnBullet(cx + 44, cy - 10, 0, 14, '#00e5ff');
+  }
 }
 
 function spawnAsteroid(speedMult) {
@@ -189,32 +330,45 @@ function spawnAsteroid(speedMult) {
   });
 }
 
+// Powerup Rewards Types:
+// 'repair'   : restores 40 HP
+// 'burst'    : 10s triple burst spread fire
+// 'wingman'  : 15s twin companion combat planes
+// 'life'     : +1 extra life
+function spawnDrop(x, y) {
+  const roll = Math.random();
+  let type = 'repair';
+  if (roll < 0.35) type = 'burst';
+  else if (roll < 0.65) type = 'wingman';
+  else if (roll < 0.85) type = 'repair';
+  else type = 'life';
+
+  drops.push({ x, y, vy: 2.2, type, pulse: 0 });
+}
+
 function spawnExplosion(x, y, count = 18, color = '#ff7722') {
-  playExplosion();
+  playExplosion(count > 30);
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const spd = 1.0 + Math.random() * 4.5;
+    const spd = 1.0 + Math.random() * 4.8;
     particles.push({
-      x: x,
-      y: y,
+      x, y,
       vx: Math.cos(angle) * spd,
       vy: Math.sin(angle) * spd,
       life: 1.0,
-      color: color
+      color
     });
   }
 }
 
-// Controls
+// Keyboard controls
 window.addEventListener('keydown', e => {
-  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-    e.preventDefault();
-  }
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') ship.moveLeft = true;
   if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') ship.moveRight = true;
   if (e.code === 'Space' || e.key === 'ArrowUp') {
-    if (!gameOver && shootTimer >= SHOOT_COOLDOWN) {
-      spawnBullet(ship.x, ship.y + ship.halfH);
+    if (!gameOver && shootTimer >= (burstTimer > 0 ? 0.14 : 0.22)) {
+      fireWeapons();
       shootTimer = 0;
     }
     ship.holdFire = true;
@@ -230,17 +384,106 @@ window.addEventListener('keyup', e => {
   if (e.code === 'Space' || e.key === 'ArrowUp') ship.holdFire = false;
 });
 
+// Touch / Mobile D-Pad Events
+function bindTouch(id, onStart, onEnd) {
+  const el = document.getElementById(id);
+  const start = (e) => { e.preventDefault(); el.classList.add('pressed'); onStart(); };
+  const end = (e) => { e.preventDefault(); el.classList.remove('pressed'); onEnd(); };
+  el.addEventListener('touchstart', start, { passive: false });
+  el.addEventListener('touchend', end, { passive: false });
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mouseup', end);
+  el.addEventListener('mouseleave', end);
+}
+
+bindTouch('btn-left', () => { ship.moveLeft = true; }, () => { ship.moveLeft = false; });
+bindTouch('btn-right', () => { ship.moveRight = true; }, () => { ship.moveRight = false; });
+bindTouch('btn-fire', () => {
+  if (gameOver) {
+    resetGame();
+    return;
+  }
+  ship.holdFire = true;
+  if (shootTimer >= (burstTimer > 0 ? 0.14 : 0.22)) {
+    fireWeapons();
+    shootTimer = 0;
+  }
+}, () => {
+  ship.holdFire = false;
+});
+
+// Canvas direct touch drag support (slide your finger anywhere to steer & tap to shoot!)
+let touchActive = false;
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  touchActive = true;
+  const rect = canvas.getBoundingClientRect();
+  const tx = (e.touches[0].clientX - rect.left) * (W / rect.width);
+  ship.x = Math.max(ship.halfW + 10, Math.min(W - ship.halfW - 10, tx));
+  ship.holdFire = true;
+  if (gameOver) resetGame();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!touchActive) return;
+  const rect = canvas.getBoundingClientRect();
+  const tx = (e.touches[0].clientX - rect.left) * (W / rect.width);
+  ship.x = Math.max(ship.halfW + 10, Math.min(W - ship.halfW - 10, tx));
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+  touchActive = false;
+  ship.holdFire = false;
+});
+
+canvas.addEventListener('click', () => {
+  if (gameOver) resetGame();
+});
+
 function resetGame() {
   score = 0;
   health = MAX_HEALTH;
+  lives = 3;
   gameOver = false;
   gameTime = 0;
   shootTimer = 0;
   spawnTimer = 0;
+  burstTimer = 0;
+  wingmanTimer = 0;
+  invulnerableTimer = 0;
   bullets.length = 0;
   asteroids.length = 0;
   particles.length = 0;
+  drops.length = 0;
   ship.x = W / 2;
+}
+
+function handleShipHit() {
+  if (invulnerableTimer > 0) return; // currently invulnerable
+
+  health -= 25;
+  spawnExplosion(ship.x, ship.y, 22, '#ff3300');
+
+  if (health <= 0) {
+    lives--;
+    if (lives > 0) {
+      // Continue playing! Respawn ship with temporary shield
+      health = MAX_HEALTH;
+      invulnerableTimer = 3.0; // 3 seconds shield
+      ship.x = W / 2;
+      playExplosion(true);
+    } else {
+      triggerGameOver();
+    }
+  }
+}
+
+function triggerGameOver() {
+  health = 0;
+  lives = 0;
+  gameOver = true;
+  spawnExplosion(ship.x, ship.y, 60, '#ff1100');
 }
 
 function diffMult() {
@@ -253,7 +496,7 @@ function spawnInterval() {
   return iv < 0.4 ? 0.4 : iv;
 }
 
-// Main Loop
+// Main Game Loop
 let lastTime = performance.now();
 function loop(now) {
   const dt = Math.min((now - lastTime) / 1000, 0.05);
@@ -266,13 +509,10 @@ function loop(now) {
 }
 
 function update(dt) {
-  // Update starfield
+  // Stars
   for (const s of stars) {
     s.y -= s.speed;
-    if (s.y < 0) {
-      s.y = H;
-      s.x = Math.random() * W;
-    }
+    if (s.y < 0) { s.y = H; s.x = Math.random() * W; }
   }
 
   if (gameOver) {
@@ -283,27 +523,62 @@ function update(dt) {
   gameTime += dt;
   shootTimer += dt;
   spawnTimer += dt;
+  if (invulnerableTimer > 0) invulnerableTimer -= dt;
+  if (burstTimer > 0) burstTimer -= dt;
+  if (wingmanTimer > 0) wingmanTimer -= dt;
 
-  // Move Ship
+  // Player Steering
   if (ship.moveLeft && ship.x - ship.halfW > 10) ship.x -= ship.speed;
   if (ship.moveRight && ship.x + ship.halfW < W - 10) ship.x += ship.speed;
 
   // Auto fire
-  if (ship.holdFire && shootTimer >= SHOOT_COOLDOWN) {
-    spawnBullet(ship.x, ship.y + ship.halfH);
+  const fireRate = burstTimer > 0 ? 0.13 : 0.22;
+  if (ship.holdFire && shootTimer >= fireRate) {
+    fireWeapons();
     shootTimer = 0;
   }
 
   // Bullets
   for (let i = bullets.length - 1; i >= 0; i--) {
-    bullets[i].y += bullets[i].vy;
-    if (bullets[i].y > H + 20) bullets.splice(i, 1);
+    const b = bullets[i];
+    b.x += b.vx;
+    b.y += b.vy;
+    if (b.y > H + 20 || b.x < -20 || b.x > W + 20) bullets.splice(i, 1);
   }
 
   // Asteroid spawn
   if (spawnTimer >= spawnInterval()) {
     spawnAsteroid(diffMult());
     spawnTimer = 0;
+  }
+
+  // Drops kinematics & catching
+  for (let i = drops.length - 1; i >= 0; i--) {
+    const d = drops[i];
+    d.y -= d.vy;
+    d.pulse += 0.08;
+
+    // Check catch with player ship
+    if (Math.abs(ship.x - d.x) < ship.halfW + 18 && Math.abs(ship.y - d.y) < ship.halfH + 18) {
+      playPowerup();
+      if (d.type === 'repair') {
+        health = Math.min(MAX_HEALTH, health + 40);
+        spawnExplosion(d.x, d.y, 16, '#00ff66');
+      } else if (d.type === 'burst') {
+        burstTimer = 12.0; // 12 seconds burst fire
+        spawnExplosion(d.x, d.y, 22, '#ff44aa');
+      } else if (d.type === 'wingman') {
+        wingmanTimer = 16.0; // 16 seconds wingmen drones
+        spawnExplosion(d.x, d.y, 22, '#00e5ff');
+      } else if (d.type === 'life') {
+        lives++;
+        spawnExplosion(d.x, d.y, 20, '#ff3366');
+      }
+      drops.splice(i, 1);
+      continue;
+    }
+
+    if (d.y < -30) drops.splice(i, 1);
   }
 
   // Asteroids kinematics & collisions
@@ -314,8 +589,8 @@ function update(dt) {
     // Missed asteroid penalty
     if (a.y + a.half < 0) {
       asteroids.splice(i, 1);
-      health -= 10;
-      if (health <= 0) triggerGameOver();
+      health -= 8;
+      if (health <= 0) handleShipHit();
       continue;
     }
 
@@ -323,11 +598,16 @@ function update(dt) {
     let destroyed = false;
     for (let j = bullets.length - 1; j >= 0; j--) {
       const b = bullets[j];
-      if (Math.abs(b.x - a.x) < a.half + 3 && Math.abs(b.y - a.y) < a.half + 8) {
+      if (Math.abs(b.x - a.x) < a.half + 4 && Math.abs(b.y - a.y) < a.half + 8) {
         bullets.splice(j, 1);
         destroyed = true;
         score += Math.floor(10 * diffMult());
         spawnExplosion(a.x, a.y, 18, '#ff6a00');
+
+        // 25% chance to drop reward item!
+        if (Math.random() < 0.25) {
+          spawnDrop(a.x, a.y);
+        }
         break;
       }
     }
@@ -340,9 +620,7 @@ function update(dt) {
     if (Math.abs(ship.x - a.x) < (ship.halfW + a.half) * 0.78 &&
         Math.abs(ship.y - a.y) < (ship.halfH + a.half) * 0.78) {
       asteroids.splice(i, 1);
-      health -= 20;
-      spawnExplosion(ship.x, ship.y, 14, '#ff3300');
-      if (health <= 0) triggerGameOver();
+      handleShipHit();
     }
   }
 
@@ -359,53 +637,71 @@ function updateParticles() {
   }
 }
 
-function triggerGameOver() {
-  health = 0;
-  gameOver = true;
-  spawnExplosion(ship.x, ship.y, 50, '#ff2200');
-}
-
 // Rendering
 function render() {
-  // Clear
   ctx.fillStyle = '#03040c';
   ctx.fillRect(0, 0, W, H);
 
-  // Invert Y coordinate so 0,0 is at bottom like OpenGL
+  // Invert Y coordinate so 0,0 is at bottom (same as OpenGL coordinate system)
   ctx.save();
   ctx.translate(0, H);
   ctx.scale(1, -1);
 
-  // Render Stars
+  // Stars
   for (const s of stars) {
     ctx.fillStyle = `rgba(255, 255, 255, ${s.b})`;
     ctx.fillRect(s.x, s.y, 2, 2);
   }
 
-  // Render Bullets
-  ctx.strokeStyle = '#ffff00';
-  ctx.lineWidth = 3;
-  ctx.shadowColor = '#ffe600';
-  ctx.shadowBlur = 8;
+  // Reward Drops
+  for (const d of drops) {
+    renderDrop(d);
+  }
+
+  // Bullets
   for (const b of bullets) {
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = 3.5;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 9;
     ctx.beginPath();
     ctx.moveTo(b.x, b.y);
-    ctx.lineTo(b.x, b.y + 16);
+    ctx.lineTo(b.x + (b.vx * 1.5), b.y + 16);
     ctx.stroke();
   }
   ctx.shadowBlur = 0;
 
-  // Render Asteroids (Minecraft style 3D blocky voxels)
+  // Asteroids (Minecraft 3D blocky voxels)
   for (const a of asteroids) {
     renderMinecraftAsteroid(a);
   }
 
-  // Render Player Ship
+  // Player Ship & Companion Wingmen
   if (!gameOver) {
-    renderPlayerShip();
+    // Shield blinking if invulnerable
+    if (invulnerableTimer <= 0 || Math.floor(invulnerableTimer * 10) % 2 === 0) {
+      renderPlayerShip(ship.x, ship.y);
+    }
+    // Shield glow bubble
+    if (invulnerableTimer > 0) {
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(ship.x, ship.y, ship.halfH + 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Companion Wingmen Planes
+    if (wingmanTimer > 0) {
+      renderWingman(ship.x - 44, ship.y - 12);
+      renderWingman(ship.x + 44, ship.y - 12);
+    }
   }
 
-  // Render Particles
+  // Particles
   for (const p of particles) {
     ctx.fillStyle = p.color;
     ctx.globalAlpha = Math.max(0, p.life);
@@ -417,6 +713,25 @@ function render() {
 
   // Update HUD
   document.getElementById('hud-score').textContent = `SCORE  ${score}`;
+  document.getElementById('hud-lives').innerHTML = `🚀 &times; ${lives}`;
+  
+  const pBadge = document.getElementById('hud-power');
+  if (burstTimer > 0 && wingmanTimer > 0) {
+    pBadge.style.display = 'block';
+    pBadge.textContent = `BURST + DRONES (${Math.ceil(Math.max(burstTimer, wingmanTimer))}s)`;
+    pBadge.style.background = '#ff00aa';
+  } else if (burstTimer > 0) {
+    pBadge.style.display = 'block';
+    pBadge.textContent = `BURST FIRE (${Math.ceil(burstTimer)}s)`;
+    pBadge.style.background = '#ff3388';
+  } else if (wingmanTimer > 0) {
+    pBadge.style.display = 'block';
+    pBadge.textContent = `TWIN DRONES (${Math.ceil(wingmanTimer)}s)`;
+    pBadge.style.background = '#00ddff';
+  } else {
+    pBadge.style.display = 'none';
+  }
+
   const hpFill = document.getElementById('hud-fill');
   const hpTxt = document.getElementById('hud-hp');
   hpFill.style.width = `${Math.max(0, health)}%`;
@@ -433,29 +748,27 @@ function render() {
     hpTxt.style.color = '#ff3333';
   }
 
-  // Render Game Over Overlay
+  // Game Over Screen
   if (gameOver) {
-    ctx.fillStyle = 'rgba(0, 0, 15, 0.82)';
+    ctx.fillStyle = 'rgba(2, 4, 18, 0.88)';
     ctx.fillRect(0, 0, W, H);
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#ff2222';
+    ctx.fillStyle = '#ff2233';
     ctx.font = 'bold 36px "Segoe UI", Arial';
-    ctx.fillText('GAME OVER', W / 2, H / 2 - 30);
+    ctx.fillText('MISSION FAILED', W / 2, H / 2 - 35);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '20px "Segoe UI", Arial';
+    ctx.font = 'bold 22px "Segoe UI", Arial';
     ctx.fillText(`Final Score: ${score}`, W / 2, H / 2 + 10);
 
-    ctx.fillStyle = '#88a0c0';
-    ctx.font = '15px "Segoe UI", Arial';
-    ctx.fillText('Press R to restart', W / 2, H / 2 + 50);
+    ctx.fillStyle = '#4ef0ff';
+    ctx.font = '16px "Segoe UI", Arial';
+    ctx.fillText('Tap screen or Press R to Restart', W / 2, H / 2 + 55);
   }
 }
 
-function renderPlayerShip() {
-  const cx = ship.x;
-  const cy = ship.y;
+function renderPlayerShip(cx, cy) {
   const hw = ship.halfW;
   const hh = ship.halfH;
 
@@ -501,7 +814,7 @@ function renderPlayerShip() {
   ctx.lineTo(cx + hw * 0.3, cy - hh * 0.8);
   ctx.fill();
 
-  // Wing tip beacons
+  // Wing beacons
   ctx.fillStyle = '#ff2233';
   ctx.fillRect(cx - hw * 1.35, cy - hh * 0.95, 4, 4);
   ctx.fillStyle = '#00ff66';
@@ -512,7 +825,7 @@ function renderPlayerShip() {
   ctx.fillRect(cx - hw * 0.85, cy - hh * 0.5, 3, hh * 0.75);
   ctx.fillRect(cx + hw * 0.75, cy - hh * 0.5, 3, hh * 0.75);
 
-  // Main Fuselage (Cyan Armor)
+  // Fuselage
   ctx.fillStyle = '#00e5ff';
   ctx.beginPath();
   ctx.moveTo(cx, cy + hh);
@@ -541,7 +854,7 @@ function renderPlayerShip() {
   ctx.closePath();
   ctx.fill();
 
-  // Cockpit glare
+  // Cockpit Glare
   ctx.strokeStyle = '#c5f2ff';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -558,6 +871,64 @@ function renderPlayerShip() {
   ctx.lineTo(cx + hw * 0.7, cy - hh);
   ctx.closePath();
   ctx.stroke();
+}
+
+function renderWingman(cx, cy) {
+  // Mini companion combat drone
+  ctx.fillStyle = '#00c8e6';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + 14);
+  ctx.lineTo(cx - 10, cy - 10);
+  ctx.lineTo(cx + 10, cy - 10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Drone cockpit
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(cx - 2, cy - 2, 4, 6);
+
+  // Drone thruster
+  ctx.fillStyle = '#ff8800';
+  ctx.fillRect(cx - 2, cy - 14, 4, 4);
+}
+
+function renderDrop(d) {
+  const scale = 1.0 + 0.15 * Math.sin(d.pulse);
+  ctx.save();
+  ctx.translate(d.x, d.y);
+  ctx.scale(scale, scale);
+
+  let bgCol = '#00ff66';
+  let label = '+HP';
+
+  if (d.type === 'burst') { bgCol = '#ff3388'; label = 'BURST'; }
+  else if (d.type === 'wingman') { bgCol = '#00e5ff'; label = 'DRONE'; }
+  else if (d.type === 'life') { bgCol = '#ff3366'; label = '+LIFE'; }
+
+  // Glowing orb container
+  ctx.fillStyle = 'rgba(10, 20, 40, 0.85)';
+  ctx.strokeStyle = bgCol;
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = bgCol;
+  ctx.shadowBlur = 12;
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Icon / Text
+  ctx.save();
+  ctx.scale(1, -1); // flip text upright
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 9px "Segoe UI", Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 0, 1);
+  ctx.restore();
+
+  ctx.restore();
 }
 
 function renderMinecraftAsteroid(a) {
