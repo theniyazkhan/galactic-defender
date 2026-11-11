@@ -54,6 +54,7 @@ jobs:
           mkdir -p public
           emcc main.cpp \
             -o public/index.html \
+            -s USE_GLUT=1 \
             -s LEGACY_GL_EMULATION=1 \
             -s ALLOW_MEMORY_GROWTH=1 \
             -O2
