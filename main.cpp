@@ -25,7 +25,12 @@
 //         -s LEGACY_GL_EMULATION=1
 // =============================================================================
 
+#ifdef __EMSCRIPTEN__
+#include <GL/glut.h>
+#include <emscripten.h>
+#else
 #include <GL/freeglut.h>
+#endif
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -33,10 +38,6 @@
 #include <ctime>
 #include <string>
 #include <vector>
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
 
 // =============================================================================
 // Global constants
