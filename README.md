@@ -1,6 +1,17 @@
 # Galactic Defender: Interactive 2D Space Survival Simulation
 
+<div align="center">
+
+[![Play Game](https://img.shields.io/badge/🎮%20PLAY%20NOW-LIVE%20DEMO-00ffcc?style=for-the-badge&logo=googlechrome&logoColor=black)](https://theniyazkhan.github.io/galactic-defender/)
+[![Deploy Status](https://img.shields.io/badge/GitHub%20Pages-Active-brightgreen?style=for-the-badge&logo=github)](https://theniyazkhan.github.io/galactic-defender/)
+
+**Direct Link to Play:** [https://theniyazkhan.github.io/galactic-defender/](https://theniyazkhan.github.io/galactic-defender/)
+
+</div>
+
 ---
+
+### Academic Information
 
 | Field | Details |
 |---|---|
@@ -10,222 +21,107 @@
 | **Submitted To** | Shrabanti Chowdhury, Senior Lecturer |
 | **Batch / Section** | 58th Batch, Section B |
 
-### Team Members
+### Project Contributors
 
-| Name | Student ID |
-|---|---|
-| Eshrath Jahan Esha | 231-115-041 |
-| Niyaz Ahmad Khan | 231-115-052 |
-
----
-
-## 🎮 Live View
-
-```
-https://theniyazkhan.github.io/galactic-defender/
-```
-
-[![Build & Deploy](https://github.com/theniyazkhan>/galactic-defender/actions/workflows/build.yml/badge.svg)](https://github.com/theniyazkhan/galactic-defender/actions/workflows/build.yml)
-
----
-
-## Abstract
-
-Galactic Defender is a real-time, interactive 2D space survival game developed in **C++** using the **FreeGLUT** and **OpenGL** libraries. The project demonstrates practical applications of computer graphics theory — including 2D geometric primitive rendering, affine transformations, bounding-box collision detection, and fixed-timestep game loops. The game is compiled to **WebAssembly** via the Emscripten toolchain, enabling browser-based play without plugins.
-
----
-
-## Features
-
-### 1. 2D Primitive Rendering (OpenGL Fixed-Function Pipeline)
-
-| Entity | Primitive | Colour |
+| Name | Student ID | Role |
 |---|---|---|
-| Player Spaceship | `GL_TRIANGLES` | Cyan (`0, 1, 1`) |
-| Enemy Asteroids | `GL_QUADS` | Red (`1, 0.25, 0.25`) |
-| Laser Projectiles | `GL_LINES` | Yellow (`1, 1, 0`) |
-| Explosion Particles | `GL_POINTS` | Orange fade |
-| HUD Bars | `GL_QUADS` | Green → Red (health) |
-| Starfield | `GL_POINTS` | White (varying brightness) |
-
-All geometry is rendered through the OpenGL fixed-function pipeline using `glBegin` / `glEnd` blocks and vertex submission via `glVertex2f`.
-
-### 2. Dynamic Kinematics
-
-- **Linear velocity model**: each entity updates its position by a constant velocity vector each frame (`position += velocity × Δt`).
-- **Fixed timestep**: the update loop runs at a constant `DT = 1/60 s` regardless of display refresh rate, ensuring deterministic simulation.
-- **Difficulty scaling**: asteroid speed and spawn frequency increase continuously as a function of elapsed time, creating a progressive challenge curve.
-
-### 3. Interactive Keyboard Controls
-
-| Key | Action |
-|---|---|
-| `A` | Move spaceship left |
-| `D` | Move spaceship right |
-| `SPACE` | Fire laser (hold for continuous fire with 0.25 s cooldown) |
-| `R` | Restart game (from Game Over screen) |
-| `ESC` | Quit |
-
-Key presses are processed using GLUT's `glutKeyboardFunc` (key-down) and `glutKeyboardUpFunc` (key-up) callbacks, enabling smooth hold-to-move and hold-to-fire mechanics.
-
-### 4. Bounding-Box Collision Detection (AABB)
-
-Collision detection uses Axis-Aligned Bounding Box (AABB) testing for all entity pairs:
-
-```
-Overlap if:  |Ax − Bx| < (Ahw + Bhw)  AND  |Ay − By| < (Ahh + Bhh)
-```
-
-| Pair | Consequence |
-|---|---|
-| Laser ↔ Asteroid | Asteroid destroyed, score increases, explosion spawned |
-| Ship ↔ Asteroid | Hull damage −20 HP, explosion spawned |
-| Asteroid exits screen | Hull damage −10 HP (missed asteroid penalty) |
-
-### 5. HUD Overlay
-
-The Heads-Up Display (HUD) is rendered using `glutBitmapCharacter` (via the `drawString` helper) and `GL_QUADS` geometry:
-
-- **Score counter** — top-left, live update each frame
-- **Hull indicator label** — top-right
-- **Animated health bar** — colour-shifts from green (100 % HP) to red (0 % HP)
-- **Game Over screen** — dimmed full-screen overlay with final score and restart prompt
-
-### 6. WebAssembly Portability
-
-The `main()` function contains an `#ifdef __EMSCRIPTEN__` block to switch between the two execution models:
-
-```cpp
-#ifdef __EMSCRIPTEN__
-    // Web: browser drives the loop via requestAnimationFrame
-    emscripten_set_main_loop(emLoop, 0, 1);
-#else
-    // Desktop: GLUT timer fires every 16 ms (~60 fps)
-    glutTimerFunc(16, timerCB, 0);
-    glutMainLoop();
-#endif
-```
-
-This single-source approach allows the identical C++ codebase to compile for both native desktop and web (WebAssembly) targets.
+| **Niyaz Ahmad Khan** | 231-115-052 | Game Engine, Kinematics & Deployment |
+| **Eshrath Jahan Esha** | 231-115-041 | Graphics Design, Visuals & Collision Detection |
 
 ---
 
-## Project Structure
+## 🚀 About the Project
+
+**Galactic Defender** is a fast-paced, real-time 2D space survival game built with **C++** using **OpenGL** and **FreeGLUT**, featuring a parallel modern **HTML5 Canvas / Web Audio edition** for seamless cross-platform play directly in any web browser.
+
+The project demonstrates core concepts in computer graphics:
+- **Primitive rendering**: Custom polygonal models constructed via vertex buffers (`GL_TRIANGLES`, `GL_QUADS`, `GL_POLYGON`, and `GL_LINES`).
+- **3D-shaded isometric voxel aesthetics**: Minecraft-styled meteorites featuring dynamic multi-angle lighting, blocky crater depressions, and incandescent ore inclusions.
+- **Particle & thruster dynamics**: Dynamic alpha-blended particle explosions and real-time oscillating jet engine exhaust flames.
+- **Bounding-Box Collision Detection (AABB)**: High-performance overlap calculations between lasers, spaceships, and asteroids.
+- **Deterministic 60 FPS loop**: Fixed-timestep updates independent of display refresh rates.
+
+---
+
+## 🎮 Game Controls
+
+| Key | Alternative | Action |
+|:---:|:---:|---|
+| <kbd>←</kbd> | <kbd>A</kbd> | Move Spaceship Left |
+| <kbd>→</kbd> | <kbd>D</kbd> | Move Spaceship Right |
+| <kbd>SPACE</kbd> | <kbd>↑</kbd> | Fire Laser Cannons (Hold to auto-fire) |
+| <kbd>R</kbd> | — | Restart Game (from Game Over screen) |
+| <kbd>ESC</kbd> | — | Exit Game (Desktop build) |
+
+---
+
+## 🎯 Gameplay Mechanics & Rules
+
+- **Destroy Meteorites**: Each destroyed asteroid earns score points scaled by current game difficulty: $\text{Points} = 10 \times \text{DifficultyMultiplier}$.
+- **Hull Damage**:
+  - **Direct collision with an asteroid**: $-20\%$ Hull damage + ship explosion effect.
+  - **Allowing an asteroid to slip past screen**: $-10\%$ Hull damage penalty (missed threat).
+- **Dynamic Difficulty Scaling**:
+  - Asteroid velocity and spawn frequency progressively ramp up over 120 seconds.
+  - Speed multiplier scales from $1.0\times$ up to $2.5\times$.
+  - Spawn interval tightens from $1.2\text{ s}$ down to a fast $0.4\text{ s}$.
+- **Game Over**: When hull health reaches $0\%$, a final score screen appears with an option to press <kbd>R</kbd> to play again.
+
+---
+
+## 🎨 Visual Assets & Design Details
+
+| Entity | Graphic Style | Technical Implementation |
+|---|---|---|
+| **Spaceship** | Cyan futuristic fighter with swept wings & cockpit | Multi-tier `GL_TRIANGLES` + wing navigation beacons + animated oscillating thrusters |
+| **Asteroids** | Minecraft-styled space meteorites | 3D-shaded isometric facets (sunlit top-left, shaded bottom-right), blocky craters, and redstone ore veins |
+| **Lasers** | High-energy yellow beam projectiles | Dual-mount `GL_LINES` with glow bloom |
+| **Explosions** | Dispersing debris particles | Radial velocity particle system with linear alpha fade |
+| **Starfield** | Deep space parallax background | Star particle pool with variable brightness |
+| **HUD** | Live score & dynamic health bar | Gradient health bar color-shifting from green ($100\%$) $\rightarrow$ yellow $\rightarrow$ red ($0\%$) |
+
+---
+
+## 📁 Repository Structure
 
 ```
 galactic-defender/
-├── main.cpp                        ← Core C++ game engine (OpenGL / FreeGLUT)
-├── README.md                       ← This document
-└── .github/
-    └── workflows/
-        └── build.yml               ← GitHub Actions CI/CD pipeline
+├── main.cpp                 # C++ OpenGL / FreeGLUT desktop game engine
+├── public/
+│   └── index.html           # Web game edition (HTML5 Canvas + Web Audio API)
+├── .github/
+│   └── workflows/
+│       └── build.yml        # Automated GitHub Actions deployment pipeline
+└── README.md                # Project documentation & presentation guide
 ```
 
 ---
 
-## Build Instructions
+## 💻 How to Run Locally
 
-### Desktop (Linux / macOS)
+### 1. Web Version (Instant in any browser)
+Simply open [`public/index.html`](file:///c:/Users/NIyaz/galactic-defender/public/index.html) in your favorite web browser (Chrome, Edge, Firefox, Safari), or click the live link above!
 
-**Prerequisites:** `g++`, `freeglut3-dev`, `libgl1-mesa-dev`, `libglu1-mesa-dev`
-
+### 2. Desktop C++ Build (Windows MinGW)
+Make sure you have `g++` and `FreeGLUT` installed:
 ```bash
-# Ubuntu / Debian
-sudo apt-get install freeglut3-dev
+g++ main.cpp -o galactic_defender.exe -DFREEGLUT_STATIC -lfreeglut_static -lopengl32 -lglu32 -lwinmm -lgdi32
+.\galactic_defender.exe
+```
 
-# Compile
+### 3. Desktop C++ Build (Linux / Ubuntu)
+```bash
+sudo apt-get install freeglut3-dev libgl1-mesa-dev libglu1-mesa-dev
 g++ main.cpp -o galactic_defender -lGL -lGLU -lglut
-
-# Run
 ./galactic_defender
 ```
 
-### Desktop (Windows — MinGW)
-
-```bash
-g++ main.cpp -o galactic_defender.exe -lfreeglut -lopengl32 -lglu32
-```
-
-### Web — Manual Emscripten Build
-
-**Prerequisites:** [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html)
-
-```bash
-mkdir -p public
-emcc main.cpp \
-     -o public/index.html \
-     -s LEGACY_GL_EMULATION=1 \
-     -O2
-
-# Serve locally (Python 3)
-cd public && python3 -m http.server 8080
-# Open: http://localhost:8080/index.html
-```
-
-### Web — Automated (GitHub Actions)
-
-Push any commit to the `main` branch. The workflow defined in
-`.github/workflows/build.yml` will:
-
-1. Install the Emscripten SDK via `mymindstorm/setup-emsdk@v12`
-2. Compile `main.cpp` → WebAssembly
-3. Deploy the output to the `gh-pages` branch via `peaceiris/actions-gh-pages@v3`
-
-The game becomes available at:
-```
-https://theniyazkhan.github.io/galactic-defender/
-```
-
 ---
 
-## Technical Design
+<div align="center">
 
-### Rendering Pipeline
+*Submitted for evaluation in **CSE 402: Computer Graphics** — Metropolitan University, Sylhet.*
 
-```
-main() → glutMainLoop / emscripten_set_main_loop
-           │
-           ├── update()          ← physics, AI, collision, state
-           └── display()
-                 ├── renderStars()       GL_POINTS
-                 ├── renderParticles()   GL_POINTS  (alpha-blended)
-                 ├── renderBullets()     GL_LINES   (yellow)
-                 ├── renderAsteroids()   GL_QUADS   (red)
-                 ├── renderPlayer()      GL_TRIANGLES (cyan)
-                 └── renderHUD()         GL_QUADS + glutBitmapCharacter
-```
+*© 2026 Eshrath Jahan Esha & Niyaz Ahmad Khan. All rights reserved.*
 
-### Memory Model
-
-All entity arrays are statically allocated fixed-size pools to avoid heap fragmentation and `std::vector` overhead in the tight 60-fps loop:
-
-| Pool | Capacity |
-|---|---|
-| `g_bullets[]` | 64 |
-| `g_asteroids[]` | 128 |
-| `g_particles[]` | 256 |
-| `g_stars[]` | 150 |
-
-### Difficulty Curve
-
-```
-diffMult(t)   = clamp(1.0 + 1.5 × (t / 120), 1.0, 2.5)
-spawnInterval = clamp(1.2 / diffMult(t), 0.40, 1.2)   seconds
-```
-
-At game start the speed multiplier is **1.0×** and spawn period is **1.2 s**.
-After 120 seconds the multiplier caps at **2.5×** with a spawn period of **0.48 s**.
-
----
-
-## References
-
-1. OpenGL 1.x Reference Manual — [https://www.opengl.org/documentation/](https://www.opengl.org/documentation/)
-2. FreeGLUT API Documentation — [https://freeglut.sourceforge.net/docs/api.php](https://freeglut.sourceforge.net/docs/api.php)
-3. Emscripten Documentation — [https://emscripten.org/docs/](https://emscripten.org/docs/)
-4. GitHub Actions Documentation — [https://docs.github.com/en/actions](https://docs.github.com/en/actions)
-5. Foley, J. D. et al. *Computer Graphics: Principles and Practice* (2nd ed.). Addison-Wesley, 1996.
-
----
-
-*© 2026 — Eshrath Jahan Esha & Niyaz Ahmad Khan — Metropolitan University, Sylhet*
+</div>
