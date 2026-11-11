@@ -6,7 +6,6 @@ on:
       - main
   workflow_dispatch:
 
-# Required so GITHUB_TOKEN can push to gh-pages branch
 permissions:
   contents: write
   pages: write
@@ -18,60 +17,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # -----------------------------------------------------------------------
-      # 1. Checkout
-      # -----------------------------------------------------------------------
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # -----------------------------------------------------------------------
-      # 2. Install Emscripten SDK
-      #    Pin to a specific stable version instead of "latest" to prevent
-      #    random breakage when the latest tag changes.
-      # -----------------------------------------------------------------------
       - name: Set up Emscripten SDK
-        uses: mymindstorm/setup-emsdk@v12
+        uses: emscripten-core/setup-emsdk@v16
         with:
           version: 3.1.51
 
-      # -----------------------------------------------------------------------
-      # 3. Sanity-check the compiler is on PATH
-      # -----------------------------------------------------------------------
       - name: Verify emcc
         run: emcc --version
 
-      # -----------------------------------------------------------------------
-      # 4. Compile main.cpp → WebAssembly bundle
-      #
-      #    -s LEGACY_GL_EMULATION=1  OpenGL 1.x fixed-function emulation
-      #                              (glBegin/glEnd, glVertex2f, glColor3f …)
-      #    -s ALLOW_MEMORY_GROWTH=1  Prevent OOM on larger WASM heaps
-      #    -O2                       Optimise binary size and speed
-      #    -o public/index.html      Emscripten generates .html + .js + .wasm
-      # -----------------------------------------------------------------------
       - name: Compile C++ to WebAssembly
         run: |
           mkdir -p public
           emcc main.cpp \
             -o public/index.html \
-            -s USE_GLUT=1 \
             -s LEGACY_GL_EMULATION=1 \
             -s ALLOW_MEMORY_GROWTH=1 \
             -O2
 
-      # -----------------------------------------------------------------------
-      # 5. Confirm build output
-      # -----------------------------------------------------------------------
       - name: List build output
         run: ls -lh public/
 
-      # -----------------------------------------------------------------------
-      # 6. Deploy public/ → gh-pages branch
-      #    peaceiris/actions-gh-pages force-pushes public/ to gh-pages.
-      #    Set GitHub Pages source to "gh-pages / root" in repo Settings.
-      # -----------------------------------------------------------------------
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
